@@ -6,6 +6,20 @@
     --text-color: #333;
     --white-color: #ffffff;
     --border-color: #e0e0e0;
+    --card-bg: #ffffff;
+    --header-bg: #ffffff;
+    --nav-bg: #ffffff;
+}
+
+/* Dark Theme Variables */
+.dark-theme {
+    --light-gray: #121212;
+    --text-color: #e0e0e0;
+    --white-color: #1e1e1e;
+    --border-color: #333;
+    --card-bg: #1e1e1e;
+    --header-bg: #1e1e1e;
+    --nav-bg: #1e1e1e;
 }
 
 /* General */
@@ -15,6 +29,7 @@ body {
     background-color: var(--light-gray);
     color: var(--text-color);
     padding-bottom: 80px; 
+    transition: background-color 0.3s, color 0.3s;
 }
 
 main { 
@@ -24,15 +39,16 @@ main {
 }
 
 section {
-    background-color: var(--white-color);
+    background-color: var(--card-bg);
     padding: 2rem;
     border-radius: 16px;
     margin-bottom: 1rem;
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    transition: background-color 0.3s, box-shadow 0.3s;
 }
 
 header {
-    background-color: var(--white-color);
+    background-color: var(--header-bg);
     color: var(--text-color);
     padding: 1rem 1.5rem;
     text-align: center;
@@ -40,9 +56,31 @@ header {
     top: 0;
     z-index: 10;
     box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.3s, color 0.3s;
 }
 
-header h1 { margin: 0; font-size: 1.2rem; font-weight: 600; }
+header h1 { margin: 0; font-size: 1.2rem; font-weight: 600; flex-grow: 1; }
+
+.theme-toggle {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.theme-toggle:hover {
+    background-color: rgba(128, 128, 128, 0.1);
+}
 
 /* Form & Button */
 form { display: grid; gap: 1.5rem; }

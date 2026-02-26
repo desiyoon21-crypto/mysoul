@@ -1,6 +1,50 @@
 import * as XLSX from 'xlsx';
 
 document.addEventListener('DOMContentLoaded', () => {
+    // --- THEME MANAGEMENT ---
+    const themeToggles = [
+        document.getElementById('login-theme-toggle'),
+        document.getElementById('app-theme-toggle')
+    ];
+
+    function initTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark-theme');
+            updateThemeIcons('dark');
+        } else {
+            document.body.classList.remove('dark-theme');
+            updateThemeIcons('light');
+        }
+    }
+
+    function toggleTheme() {
+        const isDark = document.body.classList.toggle('dark-theme');
+        const theme = isDark ? 'dark' : 'light';
+        localStorage.setItem('theme', theme);
+        updateThemeIcons(theme);
+    }
+
+    function updateThemeIcons(theme) {
+        themeToggles.forEach(btn => {
+            if (!btn) return;
+            const icon = btn.querySelector('i');
+            if (theme === 'dark') {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        });
+    }
+
+    themeToggles.forEach(btn => {
+        if (btn) btn.addEventListener('click', toggleTheme);
+    });
+
+    initTheme();
+
     // --- DATA MODELS ---
     const admins = [
         { id: 1, username: 'admin', password: 'password', role: 'super', companyId: null },

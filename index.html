@@ -10,6 +10,11 @@
 <body>
     <!-- Admin Login Screen (Default View) -->
     <section id="login-screen">
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+            <button id="login-theme-toggle" class="theme-toggle" title="테마 변경">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
         <div class="login-container">
             <h2>관리 시스템 로그인</h2>
             <form id="login-form">
@@ -24,7 +29,11 @@
     <!-- Main application (Initially Hidden) -->
     <div id="app-container" style="display: none;">
         <header>
+            <div style="width: 40px;"></div> <!-- Spacer for centering title -->
             <h1></h1>
+            <button id="app-theme-toggle" class="theme-toggle" title="테마 변경">
+                <i class="fas fa-moon"></i>
+            </button>
         </header>
         <main>
             <!-- User & Admin Screens will be dynamically shown here -->
