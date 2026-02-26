@@ -1,14 +1,54 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
-  <link href='/style.css' rel='stylesheet'>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kickboard Reporting</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
 </head>
 <body>
-  <h1>Hello, world!</h1>
-  <button onclick="console.log('hello');">Press me</button>
-  <script defer type="text/javascript" src="/main.js"></script>
+    <header>
+        <h1>Kickboard Reporting</h1>
+    </header>
+    <main>
+        <section id="qr-scanner">
+            <h2>Scan QR Code</h2>
+            <p>Point your camera at the kickboard's QR code.</p>
+            <div id="qr-reader" style="width: 500px"></div>
+            <div id="qr-reader-results"></div>
+        </section>
+        <section id="report-form" style="display: none;">
+            <h2>Report Violation</h2>
+            <form>
+                <label for="kickboard-id">Kickboard ID:</label>
+                <p id="kickboard-id"></p>
+                <label for="location">Location:</label>
+                <p id="location"></p>
+                <label for="violation-type">Violation Type:</label>
+                <select id="violation-type" name="violation-type">
+                    <option value="parking">Improper Parking</option>
+                    <option value="abandoned">Abandoned Kickboard</option>
+                    <option value="damaged">Damaged Kickboard</option>
+                </select>
+                <label for="photo">Photo:</label>
+                <input type="file" id="photo" name="photo" accept="image/*">
+                <div id="image-preview-container" style="display: none;">
+                    <img id="image-preview" src="#" alt="Image preview" />
+                    <button type="button" id="remove-image-btn">X</button>
+                </div>
+                <button type="submit">Submit Report</button>
+            </form>
+        </section>
+        <section id="success-message" style="display: none;">
+            <h2>Report Submitted!</h2>
+            <p>Thank you for your report. We will investigate the issue shortly.</p>
+            <button id="new-report-btn">Submit Another Report</button>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2023 Kickboard Reporting</p>
+    </footer>
+    <script src="main.js"></script>
 </body>
 </html>
