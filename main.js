@@ -1,127 +1,127 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Step DOM Elements
-    const step1 = document.getElementById('step1-device-info');
-    const step2 = document.getElementById('step2-detailed-report');
-    const successMessage = document.getElementById('success-message');
+    // --- Central Data Store ---
+    let reports = [
+        { id: 1, phoneNumber: '01012345678', deviceId: 'S12345', company: '씽씽', date: '2023-10-27', userPhoto: 'https://via.placeholder.com/400x300.png?text=User+Photo+1', status: 'received' },
+        { id: 2, phoneNumber: '01012345678', deviceId: 'G67890', company: '지쿠터', date: '2023-10-26', userPhoto: 'https://via.placeholder.com/400x300.png?text=User+Photo+2', status: 'received' }
+    ];
+    let nextReportId = 3;
 
-    // Button Elements
-    const nextStepBtn = document.getElementById('next-step-btn');
-    const reportForm = document.getElementById('report-form');
-    const newReportBtn = document.getElementById('new-report-btn');
+    // --- UI Elements ---
+    const screens = {
+        home: document.getElementById('home-screen'),
+        step1: document.getElementById('step1-device-info'),
+        step2: document.getElementById('step2-detailed-report'),
+        success: document.getElementById('success-message'),
+        checkStatus: document.getElementById('check-status-screen'),
+        notice: document.getElementById('notice-screen'),
+        adminList: document.getElementById('admin-list-screen'),
+        adminDetail: document.getElementById('admin-detail-screen')
+    };
 
-    // Input Elements
-    const deviceCodeInput = document.getElementById('device-code');
-    const photoInput = document.getElementById('photo');
-    const phoneNumberInput = document.getElementById('phone-number');
+    const navItems = {
+        home: document.getElementById('nav-home'),
+        report: document.getElementById('nav-report'),
+        check: document.getElementById('nav-check'),
+        notice: document.getElementById('nav-notice'),
+        admin: document.getElementById('nav-admin')
+    };
+    
+    const statusMap = {
+        received: { text: '접수', class: 'status-received' },
+        moved: { text: '기기이동', class: 'status-moved' },
+        completed: { text: '처리완료', class: 'status-completed' },
+        rejected: { text: '반려', class: 'status-rejected' }
+    };
 
-    // Map & Location Elements
-    const locationText = document.getElementById('location-text');
-    let map, marker;
-
-    // --- Step 1 to Step 2 Transition ---
-    nextStepBtn.addEventListener('click', () => {
-        if (!deviceCodeInput.value) {
-            alert('기기 코드를 입력해주세요.');
-            return;
-        }
-        step1.style.display = 'none';
-        step2.style.display = 'block';
-        initializeMap();
-    });
-
-    // --- Map Initialization and Geolocation ---
-    function initializeMap() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition((position) => {
-                const { latitude, longitude } = position.coords;
-                locationText.textContent = `위도: ${latitude.toFixed(5)}, 경도: ${longitude.toFixed(5)}`;
-                
-                if (!map) { // Initialize map only once
-                    map = L.map('map').setView([latitude, longitude], 16);
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    }).addTo(map);
-                    marker = L.marker([latitude, longitude]).addTo(map);
-                }
-
-            }, (error) => {
-                locationText.textContent = '위치를 가져올 수 없습니다. 브라우저의 위치 정보 접근을 허용해주세요.';
-                console.error('Geolocation Error:', error);
-                // Default map view if location fails
-                if (!map) {
-                    map = L.map('map').setView([37.5665, 126.9780], 13); // Default to Seoul
-                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-                }
-            });
-        } else {
-            locationText.textContent = '이 브라우저에서는 위치 정보를 지원하지 않습니다.';
-        }
+    // --- Screen & Navigation Logic ---
+    function showScreen(screenName) {
+        Object.values(screens).forEach(screen => screen.style.display = 'none');
+        screens[screenName].style.display = 'block';
+        
+        Object.values(navItems).forEach(item => item.classList.remove('active'));
+        const activeNav = Object.keys(navItems).find(key => screenName.startsWith(key));
+        if (activeNav) navItems[activeNav].classList.add('active');
+        if (screenName === 'adminDetail') navItems.admin.classList.add('active'); // Keep admin nav active
     }
 
-    // --- Image Preview ---
-    const imagePreviewContainer = document.getElementById('image-preview-container');
-    const imagePreview = document.getElementById('image-preview');
-    const removeImageBtn = document.getElementById('remove-image-btn');
-
-    photoInput.addEventListener('change', () => {
-        const file = photoInput.files[0];
-        if (file) {
-            const reader = new FileReader();
-            imagePreviewContainer.style.display = 'block';
-            reader.onload = (e) => { imagePreview.src = e.target.result; };
-            reader.readAsDataURL(file);
-        } else {
-            imagePreviewContainer.style.display = 'none';
-        }
-    });
-
-    removeImageBtn.addEventListener('click', () => {
-        photoInput.value = null;
-        imagePreview.src = '#';
-        imagePreviewContainer.style.display = 'none';
-    });
-
-    // --- Final Form Submission ---
-    reportForm.addEventListener('submit', (event) => {
-        event.preventDefault();
-        if (!photoInput.files[0]) {
-            alert('사진을 첨부해주세요.');
-            return;
-        }
-        if (!phoneNumberInput.value) {
-            alert('휴대폰 번호를 입력해주세요.');
-            return;
-        }
-
-        // Here you would typically gather all data and send to a server
-        console.log('Report Submitted:', {
-            deviceType: document.getElementById('device-type').value,
-            deviceCode: deviceCodeInput.value,
-            location: locationText.textContent,
-            violationType: document.getElementById('violation-type').value,
-            phoneNumber: phoneNumberInput.value,
-            photo: photoInput.files[0].name
+    Object.keys(navItems).forEach(key => {
+        navItems[key].addEventListener('click', (e) => {
+            e.preventDefault();
+            if (key === 'notice') { showScreen('notice'); loadNotices(); }
+            else if (key === 'admin') { showScreen('adminList'); renderAdminList(); }
+            else { showScreen(key); }
         });
-
-        step2.style.display = 'none';
-        successMessage.style.display = 'block';
     });
 
-    // --- New Report Button ---
-    newReportBtn.addEventListener('click', () => {
-        // Reset all forms and inputs
-        deviceCodeInput.value = '';
-        photoInput.value = null;
-        phoneNumberInput.value = '';
-        imagePreview.src = '#';
-        imagePreviewContainer.style.display = 'none';
-        document.getElementById('device-type').value = 'kickboard';
-        document.getElementById('violation-type').value = 'parking';
-        locationText.textContent = '현재 위치를 불러오는 중...';
+    // Simplified navigation
+    document.getElementById('start-report-btn').addEventListener('click', () => showScreen('step1'));
+    document.getElementById('new-report-btn').addEventListener('click', () => showScreen('home'));
+
+    // --- User-side Logic (Report Submission & Status Check) ---
+    document.getElementById('report-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const newReport = {
+            id: nextReportId++,
+            // ... collect data from form ...
+            status: 'received'
+        };
+        reports.unshift(newReport); // Add to beginning
+        showScreen('success');
+    });
+
+    document.getElementById('check-status-btn').addEventListener('click', () => {
+        const phone = document.getElementById('check-phone-number').value;
+        renderUserReportList(phone);
+    });
+
+    function renderUserReportList(phoneNumber) {
+        const userReports = reports.filter(r => r.phoneNumber === phoneNumber);
+        const listEl = document.getElementById('report-list');
+        listEl.innerHTML = ''; // Clear
+        userReports.forEach(report => {
+             const li = document.createElement('li');
+             const statusInfo = statusMap[report.status];
+             li.innerHTML = `<div><strong>${report.company} ${report.deviceId}</strong><span>${report.date}</span></div><span class="${statusInfo.class}">${statusInfo.text}</span>`;
+             listEl.appendChild(li);
+        });
+        document.getElementById('report-list-container').style.display = 'block';
+    }
+
+    // --- Admin-side Logic ---
+    const adminListContainer = document.getElementById('admin-report-list');
+
+    function renderAdminList() {
+        adminListContainer.innerHTML = '<h3>전체 신고 내역</h3><ul></ul>';
+        const listEl = adminListContainer.querySelector('ul');
+        reports.forEach(report => {
+            const li = document.createElement('li');
+            li.dataset.reportId = report.id;
+            const statusInfo = statusMap[report.status];
+            li.innerHTML = `<div><strong>${report.company} ${report.deviceId}</strong><span>${report.date} - ${report.status}</span></div>`;
+            li.addEventListener('click', () => showAdminDetail(report.id));
+            listEl.appendChild(li);
+        });
+    }
+
+    function showAdminDetail(reportId) {
+        const report = reports.find(r => r.id === reportId);
+        if (!report) return;
+
+        document.getElementById('admin-detail-title').textContent = `신고 처리 (ID: ${report.id})`;
+        document.getElementById('admin-detail-info').innerHTML = `<p><strong>신고일:</strong> ${report.date}</p><p><strong>기기 ID:</strong> ${report.deviceId}</p>`;
+        document.getElementById('admin-user-photo').src = report.userPhoto;
         
-        // Reset view to step 1
-        successMessage.style.display = 'none';
-        step2.style.display = 'none';
-        step1.style.display = 'block';
-    });
+        const moveBtn = document.getElementById('mark-as-moved-btn');
+        moveBtn.onclick = () => {
+            report.status = 'moved';
+            alert(`신고 ID ${report.id}의 상태가 '기기이동'으로 변경되었습니다.`);
+            showScreen('adminList');
+            renderAdminList(); // Refresh list
+        };
+
+        showScreen('adminDetail');
+    }
+
+    // --- Init ---
+    showScreen('home');
 });
