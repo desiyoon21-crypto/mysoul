@@ -1,10 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- Central Data Store ---
     let reports = [
-        { id: 1, phoneNumber: '01012345678', deviceId: 'S12345', company: '씽씽', date: '2023-10-27', userPhoto: 'https://via.placeholder.com/400x300.png?text=User+Photo+1', status: 'received' },
-        { id: 2, phoneNumber: '01012345678', deviceId: 'G67890', company: '지쿠터', date: '2023-10-26', userPhoto: 'https://via.placeholder.com/400x300.png?text=User+Photo+2', status: 'received' }
+        { id: 1, phoneNumber: '01012345678', deviceType: '킥보드', deviceId: 'S12345', violation: '불법 주차', date: '2024-05-23', userPhoto: 'https://via.placeholder.com/400x300.png?text=User+Photo+1', status: 'received' },
+        { id: 2, phoneNumber: '01098765432', deviceType: '자전거', deviceId: 'G67890', violation: '방치', date: '2024-05-22', userPhoto: 'https://via.placeholder.com/400x300.png?text=User+Photo+2', status: 'received' }
     ];
     let nextReportId = 3;
+    let currentReportData = {}; // Temp holder for multi-step form
 
     // --- UI Elements ---
     const screens = {
@@ -26,6 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
         admin: document.getElementById('nav-admin')
     };
     
+    // --- Reusable Components ---
     const statusMap = {
         received: { text: '접수', class: 'status-received' },
         moved: { text: '기기이동', class: 'status-moved' },
@@ -35,69 +37,125 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Screen & Navigation Logic ---
     function showScreen(screenName) {
-        Object.values(screens).forEach(screen => screen.style.display = 'none');
-        screens[screenName].style.display = 'block';
-        
+        // Hide all screens
+        Object.values(screens).forEach(screen => {
+            if(screen) screen.style.display = 'none';
+        });
+        // Show the target screen
+        if (screens[screenName]) {
+            screens[screenName].style.display = 'block';
+        }
+
+        // Update nav active state
         Object.values(navItems).forEach(item => item.classList.remove('active'));
-        const activeNav = Object.keys(navItems).find(key => screenName.startsWith(key));
-        if (activeNav) navItems[activeNav].classList.add('active');
-        if (screenName === 'adminDetail') navItems.admin.classList.add('active'); // Keep admin nav active
+        let activeNav = 'home';
+        if (screenName.startsWith('step') || screenName === 'success') activeNav = 'report';
+        else if (screenName === 'checkStatus') activeNav = 'check';
+        else if (screenName === 'notice') activeNav = 'notice';
+        else if (screenName.startsWith('admin')) activeNav = 'admin';
+
+        if (navItems[activeNav]) {
+            navItems[activeNav].classList.add('active');
+        }
+        
+        // Set header based on screen
+        const header = document.querySelector('header h1');
+        const screenTitles = {
+            home: '공유 모빌리티 신고', report: '신고하기', check: '신고확인',
+            notice: '공지사항', adminList: '관리자 - 신고 목록', adminDetail: '신고 처리'
+        };
+        header.textContent = screenTitles[activeNav] || '공유 모빌리티 신고';
     }
 
+    // Add nav item event listeners safely
     Object.keys(navItems).forEach(key => {
-        navItems[key].addEventListener('click', (e) => {
-            e.preventDefault();
-            if (key === 'notice') { showScreen('notice'); loadNotices(); }
-            else if (key === 'admin') { showScreen('adminList'); renderAdminList(); }
-            else { showScreen(key); }
-        });
+        if (navItems[key]) {
+            navItems[key].addEventListener('click', (e) => {
+                e.preventDefault();
+                let screenKey = key;
+                if(key === 'report') screenKey = 'step1';
+                if(key === 'check') screenKey = 'checkStatus';
+                if(key === 'admin') screenKey = 'adminList';
+                
+                showScreen(screenKey);
+
+                if (key === 'notice') loadNotices();
+                if (key === 'admin') renderAdminList();
+            });
+        }
     });
 
-    // Simplified navigation
-    document.getElementById('start-report-btn').addEventListener('click', () => showScreen('step1'));
-    document.getElementById('new-report-btn').addEventListener('click', () => showScreen('home'));
+    // --- Page Flow Button Listeners (Safe) ---
+    const addClickListener = (id, callback) => {
+        const element = document.getElementById(id);
+        if (element) element.addEventListener('click', callback);
+    };
 
-    // --- User-side Logic (Report Submission & Status Check) ---
-    document.getElementById('report-form').addEventListener('submit', (e) => {
-        e.preventDefault();
+    addClickListener('start-report-btn', () => showScreen('step1'));
+    addClickListener('new-report-btn', () => showScreen('home'));
+    addClickListener('next-step-btn', () => {
+        currentReportData.deviceType = document.getElementById('device-type').value;
+        currentReportData.deviceId = document.getElementById('device-code').value;
+        if(!currentReportData.deviceId) { alert('기기 코드를 입력하세요.'); return; }
+        showScreen('step2');
+    });
+    addClickListener('submit-report-btn', () => {
+        const phoneNumber = document.getElementById('phone-number').value;
+        if(!phoneNumber) { alert('휴대폰 번호를 입력하세요.'); return; }
+
         const newReport = {
             id: nextReportId++,
-            // ... collect data from form ...
+            phoneNumber: phoneNumber,
+            deviceType: currentReportData.deviceType,
+            deviceId: currentReportData.deviceId,
+            violation: document.getElementById('violation-type').value,
+            date: new Date().toISOString().split('T')[0],
+            userPhoto: document.getElementById('image-preview').src,
             status: 'received'
         };
-        reports.unshift(newReport); // Add to beginning
+        reports.unshift(newReport);
         showScreen('success');
+        // Reset form
+        document.getElementById('report-form').reset();
+        document.getElementById('device-form').reset();
+        currentReportData = {};
     });
-
-    document.getElementById('check-status-btn').addEventListener('click', () => {
+    addClickListener('check-status-btn', () => {
         const phone = document.getElementById('check-phone-number').value;
+        if(!phone) { alert('휴대폰 번호를 입력하세요.'); return; }
         renderUserReportList(phone);
     });
 
+    // --- User Report Status ---
     function renderUserReportList(phoneNumber) {
         const userReports = reports.filter(r => r.phoneNumber === phoneNumber);
         const listEl = document.getElementById('report-list');
-        listEl.innerHTML = ''; // Clear
-        userReports.forEach(report => {
-             const li = document.createElement('li');
-             const statusInfo = statusMap[report.status];
-             li.innerHTML = `<div><strong>${report.company} ${report.deviceId}</strong><span>${report.date}</span></div><span class="${statusInfo.class}">${statusInfo.text}</span>`;
-             listEl.appendChild(li);
-        });
-        document.getElementById('report-list-container').style.display = 'block';
+        const container = document.getElementById('report-list-container');
+        listEl.innerHTML = '';
+        if (userReports.length > 0) {
+            userReports.forEach(report => {
+                const li = document.createElement('li');
+                const statusInfo = statusMap[report.status] || { text: '알 수 없음', class: '' };
+                li.innerHTML = `<div class="report-item-info"><strong>${report.deviceId}</strong><span>${report.date}</span></div><span class="report-item-status ${statusInfo.class}">${statusInfo.text}</span>`;
+                listEl.appendChild(li);
+            });
+        } else {
+            listEl.innerHTML = '<p>해당 번호로 접수된 신고 내역이 없습니다.</p>';
+        }
+        container.style.display = 'block';
     }
 
-    // --- Admin-side Logic ---
-    const adminListContainer = document.getElementById('admin-report-list');
-
+    // --- Admin Logic ---
     function renderAdminList() {
-        adminListContainer.innerHTML = '<h3>전체 신고 내역</h3><ul></ul>';
-        const listEl = adminListContainer.querySelector('ul');
+        const container = document.getElementById('admin-report-list');
+        container.innerHTML = '<h3>전체 신고 내역</h3><ul></ul>';
+        const listEl = container.querySelector('ul');
+        listEl.innerHTML = '';
         reports.forEach(report => {
             const li = document.createElement('li');
             li.dataset.reportId = report.id;
-            const statusInfo = statusMap[report.status];
-            li.innerHTML = `<div><strong>${report.company} ${report.deviceId}</strong><span>${report.date} - ${report.status}</span></div>`;
+            const statusInfo = statusMap[report.status] || { text: '알 수 없음', class: '' };
+            li.innerHTML = `<div class="report-item-info"><strong>${report.deviceId} (${report.deviceType})</strong><span>${report.date}</span></div><span class="report-item-status ${statusInfo.class}">${statusInfo.text}</span>`;
             li.addEventListener('click', () => showAdminDetail(report.id));
             listEl.appendChild(li);
         });
@@ -107,21 +165,50 @@ document.addEventListener('DOMContentLoaded', () => {
         const report = reports.find(r => r.id === reportId);
         if (!report) return;
 
-        document.getElementById('admin-detail-title').textContent = `신고 처리 (ID: ${report.id})`;
-        document.getElementById('admin-detail-info').innerHTML = `<p><strong>신고일:</strong> ${report.date}</p><p><strong>기기 ID:</strong> ${report.deviceId}</p>`;
-        document.getElementById('admin-user-photo').src = report.userPhoto;
+        document.getElementById('admin-detail-title').textContent = `신고 ID: ${report.id}`;
+        document.getElementById('admin-detail-info').innerHTML = 
+            `<p><strong>신고자:</strong> ${report.phoneNumber}</p>` +
+            `<p><strong>기기 ID:</strong> ${report.deviceId}</p>` +
+            `<p><strong>위반 유형:</strong> ${report.violation}</p>` +
+            `<p><strong>신고일:</strong> ${report.date}</p>`;
+        const userPhoto = document.getElementById('admin-user-photo');
+        userPhoto.src = report.userPhoto;
+        userPhoto.style.display = report.userPhoto ? 'block' : 'none';
         
         const moveBtn = document.getElementById('mark-as-moved-btn');
         moveBtn.onclick = () => {
             report.status = 'moved';
             alert(`신고 ID ${report.id}의 상태가 '기기이동'으로 변경되었습니다.`);
+            renderAdminList();
             showScreen('adminList');
-            renderAdminList(); // Refresh list
         };
 
         showScreen('adminDetail');
     }
 
-    // --- Init ---
+    // --- Placeholder/Utility Functions ---
+    function loadNotices() { 
+        const noticeList = document.getElementById('notice-list');
+        if (noticeList && !noticeList.innerHTML) {
+            noticeList.innerHTML = '<p>현재 공지사항이 없습니다.</p>';
+        }
+    }
+
+    const photoInput = document.getElementById('photo');
+    if (photoInput) {
+        photoInput.addEventListener('change', () => {
+            const file = photoInput.files[0];
+            if(file){
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('image-preview').src = e.target.result;
+                    document.getElementById('image-preview-container').style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // --- Initial Load ---
     showScreen('home');
 });

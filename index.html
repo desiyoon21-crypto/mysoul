@@ -9,34 +9,106 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <header>
+        <h1>공유 모빌리티 신고</h1>
+    </header>
     <main>
-        <!-- User Screens (Home, Report, Success, Check Status, Notice) -->
-        <!-- ... existing user screens ... -->
-        <section id="home-screen">...</section>
-        <section id="step1-device-info" style="display: none;">...</section>
-        <section id="step2-detailed-report" style="display: none;">...</section>
-        <section id="success-message" style="display: none;">...</section>
-        <section id="check-status-screen" style="display: none;">...</section>
-        <section id="notice-screen" style="display: none;">...</section>
+        <!-- Home Screen -->
+        <section id="home-screen">
+            <div class="home-content">
+                <img src="/images/scooter-icon.png" alt="킥보드 아이콘" class="home-icon">
+                <h1>공유 킥보드/자전거<br>불법주차 신고 시스템</h1>
+                <p>불편을 드리는 공유 모빌리티를<br>간편하게 신고하고 안전한 거리를 만들어요.</p>
+                <button id="start-report-btn">신고하기</button>
+            </div>
+        </section>
+
+        <!-- Step 1: Device Info -->
+        <section id="step1-device-info" style="display: none;">
+            <form id="device-form">
+                <label for="device-type">기기 종류</label>
+                <select id="device-type" name="device-type">
+                    <option value="kickboard">킥보드</option>
+                    <option value="bicycle">자전거</option>
+                </select>
+                <label for="device-code">기기 코드</label>
+                <input type="text" id="device-code" name="device-code" placeholder="기기 코드를 입력하세요">
+                <button type="button" id="next-step-btn">다음</button>
+            </form>
+        </section>
+
+        <!-- Step 2: Detailed Report -->
+        <section id="step2-detailed-report" style="display: none;">
+            <form id="report-form" onsubmit="return false;">
+                <label>위치</label>
+                <div id="map"></div>
+                <p id="location-text">현재 위치를 불러오는 중...</p>
+                
+                <label for="photo">사진 첨부</label>
+                <input type="file" id="photo" name="photo" accept="image/*">
+                <div id="image-preview-container" style="display: none;">
+                    <img id="image-preview" src="#" alt="이미지 미리보기" />
+                    <button type="button" id="remove-image-btn">X</button>
+                </div>
+
+                <label for="violation-type">위반 유형</label>
+                <select id="violation-type" name="violation-type">
+                    <option value="parking">불법 주차</option>
+                    <option value="abandoned">방치</option>
+                    <option value="damaged">파손</option>
+                </select>
+
+                <label for="phone-number">휴대폰 번호</label>
+                <input type="tel" id="phone-number" name="phone-number" placeholder="'-' 없이 숫자만 입력">
+
+                <button type="submit" id="submit-report-btn">신고하기</button>
+            </form>
+        </section>
+
+        <!-- Success Message -->
+        <section id="success-message" style="display: none;">
+            <div class="success-content">
+                <i class="fas fa-check-circle"></i>
+                <h2>신고가 접수되었습니다!</h2>
+                <p>신고해 주셔서 감사합니다. 신속하게 처리하겠습니다.</p>
+                <button id="new-report-btn">홈으로 돌아가기</button>
+            </div>
+        </section>
+
+        <!-- Check Report Status -->
+        <section id="check-status-screen" style="display: none;">
+            <form id="check-form" onsubmit="return false;">
+                <label for="check-phone-number">휴대폰 번호</label>
+                <input type="tel" id="check-phone-number" placeholder="'-' 없이 숫자만 입력">
+                <button type="button" id="check-status-btn">확인</button>
+            </form>
+            <div id="report-list-container" class="report-list-container" style="display: none;">
+                <h3>신고 내역</h3>
+                <ul id="report-list"></ul>
+            </div>
+        </section>
+
+        <!-- Notice Screen -->
+        <section id="notice-screen" style="display: none;">
+            <div id="notice-list" class="accordion"></div>
+        </section>
 
         <!-- Admin Screen: Report List -->
         <section id="admin-list-screen" style="display: none;">
-            <header><h1>관리자 - 신고 목록</h1></header>
             <div id="admin-report-list" class="report-list-container"></div>
         </section>
 
         <!-- Admin Screen: Report Detail & Action -->
         <section id="admin-detail-screen" style="display: none;">
-            <header><h1 id="admin-detail-title">신고 처리</h1></header>
             <div class="detail-content">
-                <h3>신고 정보</h3>
+                <h3 id="admin-detail-title"></h3>
                 <div id="admin-detail-info"></div>
                 
                 <h3>사용자 제출 사진</h3>
                 <img id="admin-user-photo" src="#" alt="신고 사진" class="detail-photo">
 
                 <h3>처리 상태 업데이트</h3>
-                <form id="admin-action-form">
+                <form id="admin-action-form" onsubmit="return false;">
                     <label for="completion-photo">처리 완료 사진</label>
                     <input type="file" id="completion-photo" accept="image/*">
                     <img id="completion-photo-preview" src="#" alt="완료 사진 미리보기" style="display: none;" class="detail-photo">
