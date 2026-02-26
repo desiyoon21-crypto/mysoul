@@ -1,123 +1,127 @@
-// Get user's location
-const locationElement = document.getElementById('location');
+document.addEventListener('DOMContentLoaded', () => {
+    // Step DOM Elements
+    const step1 = document.getElementById('step1-device-info');
+    const step2 = document.getElementById('step2-detailed-report');
+    const successMessage = document.getElementById('success-message');
 
-if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition((position) => {
-        const { latitude, longitude } = position.coords;
-        locationElement.textContent = `Lat: ${latitude.toFixed(2)}, Lon: ${longitude.toFixed(2)}`;
-    }, (error) => {
-        locationElement.textContent = 'Could not get location.';
-        console.error(error);
+    // Button Elements
+    const nextStepBtn = document.getElementById('next-step-btn');
+    const reportForm = document.getElementById('report-form');
+    const newReportBtn = document.getElementById('new-report-btn');
+
+    // Input Elements
+    const deviceCodeInput = document.getElementById('device-code');
+    const photoInput = document.getElementById('photo');
+    const phoneNumberInput = document.getElementById('phone-number');
+
+    // Map & Location Elements
+    const locationText = document.getElementById('location-text');
+    let map, marker;
+
+    // --- Step 1 to Step 2 Transition ---
+    nextStepBtn.addEventListener('click', () => {
+        if (!deviceCodeInput.value) {
+            alert('기기 코드를 입력해주세요.');
+            return;
+        }
+        step1.style.display = 'none';
+        step2.style.display = 'block';
+        initializeMap();
     });
-}
 
-// Section Elements
-const qrScannerSection = document.getElementById('qr-scanner');
-const reportFormSection = document.getElementById('report-form');
-const successMessageSection = document.getElementById('success-message');
+    // --- Map Initialization and Geolocation ---
+    function initializeMap() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const { latitude, longitude } = position.coords;
+                locationText.textContent = `위도: ${latitude.toFixed(5)}, 경도: ${longitude.toFixed(5)}`;
+                
+                if (!map) { // Initialize map only once
+                    map = L.map('map').setView([latitude, longitude], 16);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    }).addTo(map);
+                    marker = L.marker([latitude, longitude]).addTo(map);
+                }
 
-// Form and Buttons
-const reportForm = document.querySelector('#report-form form');
-const newReportBtn = document.getElementById('new-report-btn');
-
-
-reportForm.addEventListener('submit', (event) => {
-    event.preventDefault();
-    const kickboardId = document.getElementById('kickboard-id').textContent;
-    const photo = document.getElementById('photo').files[0];
-
-    if (!kickboardId) {
-        alert('Please scan a kickboard QR code.');
-        return;
+            }, (error) => {
+                locationText.textContent = '위치를 가져올 수 없습니다. 브라우저의 위치 정보 접근을 허용해주세요.';
+                console.error('Geolocation Error:', error);
+                // Default map view if location fails
+                if (!map) {
+                    map = L.map('map').setView([37.5665, 126.9780], 13); // Default to Seoul
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                }
+            });
+        } else {
+            locationText.textContent = '이 브라우저에서는 위치 정보를 지원하지 않습니다.';
+        }
     }
-    if (!photo) {
-        alert('Please select a photo of the violation.');
-        return;
-    }
 
-    // Hide form and show success message
-    reportFormSection.style.display = 'none';
-    successMessageSection.style.display = 'block';
+    // --- Image Preview ---
+    const imagePreviewContainer = document.getElementById('image-preview-container');
+    const imagePreview = document.getElementById('image-preview');
+    const removeImageBtn = document.getElementById('remove-image-btn');
 
-    // Here you would typically send the data to a server
-});
+    photoInput.addEventListener('change', () => {
+        const file = photoInput.files[0];
+        if (file) {
+            const reader = new FileReader();
+            imagePreviewContainer.style.display = 'block';
+            reader.onload = (e) => { imagePreview.src = e.target.result; };
+            reader.readAsDataURL(file);
+        } else {
+            imagePreviewContainer.style.display = 'none';
+        }
+    });
 
-// QR Code Scanner
-let html5QrcodeScanner;
-
-document.addEventListener('DOMContentLoaded', (event) => {
-    if (document.getElementById('qr-reader')) {
-        html5QrcodeScanner = new Html5QrcodeScanner(
-            "qr-reader", 
-            { 
-                fps: 10, 
-                qrbox: { width: 250, height: 250 } 
-            }, 
-            /* verbose= */ false);
-        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-    }
-});
-
-function onScanSuccess(decodedText, decodedResult) {
-    console.log(`Scan result: ${decodedText}`, decodedResult);
-    document.getElementById('kickboard-id').textContent = decodedText;
-    qrScannerSection.style.display = 'none'; // Hide scanner after success
-    reportFormSection.style.display = 'block';
-
-    if (html5QrcodeScanner && html5QrcodeScanner.isScanning) {
-        html5QrcodeScanner.clear().catch(error => {
-            console.error("Failed to clear html5QrcodeScanner.", error);
-        });
-    }
-}
-
-function onScanFailure(error) {
-  // handle scan failure, usually better to ignore and keep scanning.
-}
-
-
-// Image Preview
-const photoInput = document.getElementById('photo');
-const imagePreviewContainer = document.getElementById('image-preview-container');
-const imagePreview = document.getElementById('image-preview');
-const removeImageBtn = document.getElementById('remove-image-btn');
-
-photoInput.addEventListener('change', () => {
-    const file = photoInput.files[0];
-    if (file) {
-        const reader = new FileReader();
-        imagePreviewContainer.style.display = 'block';
-        reader.onload = (e) => {
-            imagePreview.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-    } else {
+    removeImageBtn.addEventListener('click', () => {
+        photoInput.value = null;
+        imagePreview.src = '#';
         imagePreviewContainer.style.display = 'none';
-    }
-});
+    });
 
-removeImageBtn.addEventListener('click', () => {
-    photoInput.value = null;
-    imagePreview.src = '#';
-    imagePreviewContainer.style.display = 'none';
-});
+    // --- Final Form Submission ---
+    reportForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (!photoInput.files[0]) {
+            alert('사진을 첨부해주세요.');
+            return;
+        }
+        if (!phoneNumberInput.value) {
+            alert('휴대폰 번호를 입력해주세요.');
+            return;
+        }
 
-// New Report Button
-newReportBtn.addEventListener('click', () => {
-    // Reset form fields
-    document.getElementById('kickboard-id').textContent = '';
-    document.getElementById('violation-type').value = 'parking';
-    photoInput.value = null;
-    imagePreview.src = '#';
-    imagePreviewContainer.style.display = 'none';
+        // Here you would typically gather all data and send to a server
+        console.log('Report Submitted:', {
+            deviceType: document.getElementById('device-type').value,
+            deviceCode: deviceCodeInput.value,
+            location: locationText.textContent,
+            violationType: document.getElementById('violation-type').value,
+            phoneNumber: phoneNumberInput.value,
+            photo: photoInput.files[0].name
+        });
 
-    // Show the QR scanner and hide other sections
-    successMessageSection.style.display = 'none';
-    reportFormSection.style.display = 'none';
-    qrScannerSection.style.display = 'block';
+        step2.style.display = 'none';
+        successMessage.style.display = 'block';
+    });
 
-    // Re-render the QR scanner
-    if (html5QrcodeScanner) {
-        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-    }
+    // --- New Report Button ---
+    newReportBtn.addEventListener('click', () => {
+        // Reset all forms and inputs
+        deviceCodeInput.value = '';
+        photoInput.value = null;
+        phoneNumberInput.value = '';
+        imagePreview.src = '#';
+        imagePreviewContainer.style.display = 'none';
+        document.getElementById('device-type').value = 'kickboard';
+        document.getElementById('violation-type').value = 'parking';
+        locationText.textContent = '현재 위치를 불러오는 중...';
+        
+        // Reset view to step 1
+        successMessage.style.display = 'none';
+        step2.style.display = 'none';
+        step1.style.display = 'block';
+    });
 });

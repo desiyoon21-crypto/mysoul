@@ -1,31 +1,39 @@
-# Kickboard Reporting App
+# 킥보드/자전거 신고 앱
 
-## Overview
+## 개요
 
-This application allows users to report illegally parked or abandoned kickboards. The user can scan the kickboard's QR code, capture the location, upload a photo of the violation, and categorize the issue. This creates a comprehensive report that can be sent to the responsible authorities or kickboard company.
+이 애플리케이션은 불법 주차되거나 방치된 킥보드나 자전거를 신고하는 앱입니다. 사용자는 기기 종류를 선택하고, 기기 코드를 입력한 후, 지도에서 위치를 확인하고, 위반 사진을 찍어 신고할 수 있습니다. 이를 통해 책임 기관에 보낼 수 있는 포괄적인 보고서를 작성합니다.
 
-## Features
+## 기능
 
-*   **QR Code Scanner:** To quickly identify the kickboard.
-*   **Geolocation:** To pinpoint the location of the kickboard.
-*   **Photo Upload:** To provide visual evidence of the violation.
-*   **Violation Classification:** To categorize the type of parking violation.
-*   **Image Preview:** To allow users to preview the selected image before submission.
-*   **Remove Image:** To allow users to remove the selected image.
-*   **Success Message:** To provide feedback to the user after submitting a report.
-*   **Responsive Design:** The app will be designed to work well on both mobile devices and desktops.
+*   **신고 절차 2단계 분리:** 사용자 편의성을 위해 기기 정보 입력과 상세 신고 단계를 분리했습니다.
+*   **기기 종류 선택:** 킥보드 또는 자전거를 선택할 수 있습니다.
+*   **수동 기기 코드 입력:** QR 코드가 없어도 기기 번호를 직접 입력하여 신고할 수 있습니다.
+*   **지도 연동 위치 확인:** 신고 위치를 지도 위에서 시각적으로 확인할 수 있습니다. (현재는 플레이스홀더로 구현)
+*   **사진 촬영 및 업로드:** 위반 현장을 사진으로 찍거나 앨범에서 업로드할 수 있습니다.
+*   **위반 유형 분류:** 불법 주차, 방치, 파손 등 위반 유형을 선택합니다.
+*   **핸드폰 번호 입력:** 신고자 확인을 위해 핸드폰 번호를 입력받습니다.
+*   **반응형 디자인:** 모바일 기기와 데스크톱 모두에서 잘 작동하도록 설계되었습니다.
+*   **한국어 지원:** 앱이 한국어로 제공됩니다.
 
-## Design and Style
+## 디자인 및 스타일
 
-*   **Layout:** A single-page application interface.
-*   **Theme:** A clean and modern design with a focus on usability.
-*   **Color Palette:** A simple and intuitive color scheme.
-*   **Typography:** Clear and legible fonts.
-*   **Iconography:** Use of icons to enhance user experience.
+*   **레이아웃:** 단계별 신고 절차를 따르는 다단계 인터페이스.
+*   **테마:** 사용성에 초점을 맞춘 깨끗하고 현대적인 디자인.
+*   **타이포그래피:** 명확하고 읽기 쉬운 'Noto Sans KR' 글꼴 사용.
+*   **아이콘:** 사용자 경험을 향상시키기 위한 아이콘 사용.
 
-## Current Task: Implement Success Message
+## 현재 작업: 다단계 신고 프로세스 구현
 
-I will add a success message to the application. This will involve:
-- Adding a success message element to `index.html`.
-- Updating `main.js` to show the success message after a report is submitted.
-- Adding styling for the success message in `style.css`.
+사용자 요청에 따라 다음과 같이 신고 프로세스를 개편합니다.
+
+1.  **1단계: 기기 정보 입력**
+    *   기기 종류(킥보드/자전거) 선택 드롭다운 추가.
+    *   기기 코드 수동 입력 필드 추가.
+    *   다음 단계로 이동하는 버튼.
+2.  **2단계: 상세 정보 입력**
+    *   위치 확인을 위한 지도 연동 (플레이스홀더).
+    *   사진 촬영 기능.
+    *   위반 유형 선택.
+    *   핸드폰 번호 입력 필드.
+    *   최종 제출 버튼.

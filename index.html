@@ -1,54 +1,72 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kickboard Reporting</title>
+    <title>킥보드/자전거 신고</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link rel="stylesheet" href="style.css">
-    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
 </head>
 <body>
     <header>
-        <h1>Kickboard Reporting</h1>
+        <h1>킥보드/자전거 신고</h1>
     </header>
     <main>
-        <section id="qr-scanner">
-            <h2>Scan QR Code</h2>
-            <p>Point your camera at the kickboard's QR code.</p>
-            <div id="qr-reader" style="width: 500px"></div>
-            <div id="qr-reader-results"></div>
-        </section>
-        <section id="report-form" style="display: none;">
-            <h2>Report Violation</h2>
-            <form>
-                <label for="kickboard-id">Kickboard ID:</label>
-                <p id="kickboard-id"></p>
-                <label for="location">Location:</label>
-                <p id="location"></p>
-                <label for="violation-type">Violation Type:</label>
-                <select id="violation-type" name="violation-type">
-                    <option value="parking">Improper Parking</option>
-                    <option value="abandoned">Abandoned Kickboard</option>
-                    <option value="damaged">Damaged Kickboard</option>
+        <!-- Step 1: Device Info -->
+        <section id="step1-device-info">
+            <h2>1. 기기 정보 입력</h2>
+            <form id="device-form">
+                <label for="device-type">기기 종류</label>
+                <select id="device-type" name="device-type">
+                    <option value="kickboard">킥보드</option>
+                    <option value="bicycle">자전거</option>
                 </select>
-                <label for="photo">Photo:</label>
-                <input type="file" id="photo" name="photo" accept="image/*">
-                <div id="image-preview-container" style="display: none;">
-                    <img id="image-preview" src="#" alt="Image preview" />
-                    <button type="button" id="remove-image-btn">X</button>
-                </div>
-                <button type="submit">Submit Report</button>
+                <label for="device-code">기기 코드</label>
+                <input type="text" id="device-code" name="device-code" placeholder="기기 코드를 입력하세요">
+                <button type="button" id="next-step-btn">다음</button>
             </form>
         </section>
+
+        <!-- Step 2: Detailed Report -->
+        <section id="step2-detailed-report" style="display: none;">
+            <h2>2. 상세 정보 입력</h2>
+            <form id="report-form">
+                <label>위치</label>
+                <div id="map"></div>
+                <p id="location-text">현재 위치를 불러오는 중...</p>
+                
+                <label for="photo">사진 첨부</label>
+                <input type="file" id="photo" name="photo" accept="image/*">
+                <div id="image-preview-container" style="display: none;">
+                    <img id="image-preview" src="#" alt="이미지 미리보기" />
+                    <button type="button" id="remove-image-btn">X</button>
+                </div>
+
+                <label for="violation-type">위반 유형</label>
+                <select id="violation-type" name="violation-type">
+                    <option value="parking">불법 주차</option>
+                    <option value="abandoned">방치</option>
+                    <option value="damaged">파손</option>
+                </select>
+
+                <label for="phone-number">휴대폰 번호</label>
+                <input type="tel" id="phone-number" name="phone-number" placeholder="'-' 없이 숫자만 입력">
+
+                <button type="submit">신고하기</button>
+            </form>
+        </section>
+
+        <!-- Success Message -->
         <section id="success-message" style="display: none;">
-            <h2>Report Submitted!</h2>
-            <p>Thank you for your report. We will investigate the issue shortly.</p>
-            <button id="new-report-btn">Submit Another Report</button>
+            <h2>신고가 접수되었습니다!</h2>
+            <p>신고해 주셔서 감사합니다. 신속하게 처리하겠습니다.</p>
+            <button id="new-report-btn">새로운 신고하기</button>
         </section>
     </main>
     <footer>
-        <p>&copy; 2023 Kickboard Reporting</p>
+        <p>&copy; 2023 킥보드/자전거 신고</p>
     </footer>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="main.js"></script>
 </body>
 </html>
