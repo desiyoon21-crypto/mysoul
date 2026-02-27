@@ -1,206 +1,316 @@
-import * as XLSX from 'xlsx';
-
 document.addEventListener('DOMContentLoaded', () => {
-    // --- THEME MANAGEMENT ---
-    const themeToggles = [
-        document.getElementById('login-theme-toggle'),
-        document.getElementById('app-theme-toggle')
-    ];
-
-    function initTheme() {
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        if (savedTheme === 'dark') {
-            document.body.classList.add('dark-theme');
-            updateThemeIcons('dark');
-        } else {
-            document.body.classList.remove('dark-theme');
-            updateThemeIcons('light');
-        }
-    }
-
-    function toggleTheme() {
-        const isDark = document.body.classList.toggle('dark-theme');
-        const theme = isDark ? 'dark' : 'light';
-        localStorage.setItem('theme', theme);
-        updateThemeIcons(theme);
-    }
-
-    function updateThemeIcons(theme) {
-        themeToggles.forEach(btn => {
-            if (!btn) return;
-            const icon = btn.querySelector('i');
-            if (theme === 'dark') {
-                icon.classList.remove('fa-moon');
-                icon.classList.add('fa-sun');
-            } else {
-                icon.classList.remove('fa-sun');
-                icon.classList.add('fa-moon');
-            }
-        });
-    }
-
-    themeToggles.forEach(btn => {
-        if (btn) btn.addEventListener('click', toggleTheme);
-    });
-
-    initTheme();
-
     // --- DATA MODELS ---
-    const admins = [
-        { id: 1, username: 'admin', password: 'password', role: 'super', companyId: null },
-        { id: 2, username: 'companyA', password: 'password', role: 'company', companyId: 101 },
+    const admins = [{ id: 1, username: 'admin', password: 'password', role: 'super' }];
+    let companies = [
+        { id: 101, name: '씽씽', prefix: 'S' }, 
+        { id: 102, name: '지쿠터', prefix: 'G' }
     ];
-
-    const companies = [
-        { id: 101, name: '씽씽' },
-        { id: 102, name: '지쿠터' },
-    ];
-    let nextCompanyId = 103;
-
     let reports = [
-        { id: 1, deviceId: 'S123', companyId: 101, status: 'received', date: '2024-05-23' },
-        { id: 2, deviceId: 'G456', companyId: 102, status: 'moved', date: '2024-05-22' },
-        { id: 3, deviceId: 'S789', companyId: 101, status: 'towed', date: '2024-05-21' },
-        { id: 4, deviceId: 'S101', companyId: 101, status: 'received', date: '2024-04-28' },
-        { id: 5, deviceId: 'G202', companyId: 102, status: 'moved', date: '2024-04-20' },
-        { id: 6, deviceId: 'S303', companyId: 101, status: 'moved', date: '2024-04-15' },
+        { id: 1, deviceId: 'S123', companyId: 101, status: 'received', date: '2024-05-23', lat: 37.5665, lng: 126.9780, phone: '01012345678', photo: 'images/scooter-icon.png', content: '인도를 막고 있어요.' },
+        { id: 2, deviceId: 'G456', companyId: 102, status: 'completed', date: '2024-05-22', lat: 37.5651, lng: 126.9770, phone: '01012345678', photo: 'images/scooter-icon.png', content: '횡단보도 위에 주차되어 있습니다.' },
+        { id: 3, deviceId: 'S789', companyId: 101, status: 'towed', date: '2024-04-21', lat: 37.5600, lng: 126.9700, phone: '01087654321', photo: 'images/scooter-icon.png', content: '지하철역 입구를 막고 있습니다.' },
     ];
-
+    let nextReportId = 4;
     let currentUser = null;
+    let map, marker;
 
     // --- UI ELEMENTS ---
-    const loginScreen = document.getElementById('login-screen');
-    const appContainer = document.getElementById('app-container');
-    const mainContent = appContainer.querySelector('main');
-    const bottomNav = appContainer.querySelector('.bottom-nav');
-    const headerTitle = appContainer.querySelector('header h1');
+    const allScreens = document.querySelectorAll('main > section');
+    const headerTitle = document.getElementById('header-title');
+    const bottomNav = document.querySelector('.bottom-nav');
 
-    // --- LOGIN & UI INITIALIZATION (same as before) ---
-    const loginForm = document.getElementById('login-form');
-    loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        const user = admins.find(u => u.username === username && u.password === password);
+    // --- SCREEN & NAVIGATION LOGIC ---
+    const showScreen = (screenId) => {
+        allScreens.forEach(s => s.style.display = 'none');
+        const screen = document.getElementById(screenId);
+        if(screen) screen.style.display = 'block';
+    };
 
-        if (user) {
-            currentUser = user;
-            initializeAppUI();
-        } else {
-            const loginError = document.getElementById('login-error');
-            loginError.textContent = '아이디 또는 비밀번호가 잘못되었습니다.';
-            setTimeout(() => loginError.textContent = '', 3000);
+    const updateNav = (role) => {
+        bottomNav.innerHTML = '';
+        let navConfig = [];
+
+        if (role === 'user') {
+            navConfig = [
+                { id: 'home-screen', icon: 'fa-home', text: '홈' },
+                { id: 'report-screen', icon: 'fa-bullhorn', text: '신고하기' },
+                { id: 'check-status-screen', icon: 'fa-receipt', text: '신고확인' },
+                { id: 'notice-screen', icon: 'fa-info-circle', text: '공지사항' }
+            ];
+        } else if (role === 'super') {
+            navConfig = [
+                { id: 'admin-dashboard-screen', icon: 'fa-tachometer-alt', text: '대시보드' },
+                { id: 'admin-companies-screen', icon: 'fa-building', text: '업체 관리' },
+                { id: 'admin-reports-screen', icon: 'fa-file-alt', text: '신고 관리' },
+                { id: 'admin-stats-screen', icon: 'fa-chart-pie', text: '통계' },
+                { id: 'logout', icon: 'fa-sign-out-alt', text: '로그아웃' },
+            ];
+        } else if (role === 'pm') {
+             navConfig = [
+                { id: 'admin-dashboard-screen', icon: 'fa-clipboard-list', text: '신고 목록' },
+                { id: 'logout', icon: 'fa-sign-out-alt', text: '로그아웃' },
+            ];
+        } else if (role === 'towing') {
+             navConfig = [
+                { id: 'admin-dashboard-screen', icon: 'fa-truck', text: '견인 목록' },
+                { id: 'logout', icon: 'fa-sign-out-alt', text: '로그아웃' },
+            ];
         }
-    });
 
-    function initializeAppUI() {
-        loginScreen.style.display = 'none';
-        appContainer.style.display = 'block';
-        buildNavigation();
-        showScreen('dashboard');
+        navConfig.forEach(item => {
+            const a = document.createElement('a');
+            a.href = '#';
+            a.className = 'nav-item';
+            a.dataset.screen = item.id;
+            a.innerHTML = `<i class="fas ${item.icon}"></i><span>${item.text}</span>`;
+            a.addEventListener('click', handleNavClick);
+            bottomNav.appendChild(a);
+        });
+    };
+
+    const handleNavClick = (e) => {
+        e.preventDefault();
+        const target = e.currentTarget;
+        const screenId = target.dataset.screen;
+
+        if (screenId === 'logout') { logout(); return; }
+
+        headerTitle.textContent = target.querySelector('span').textContent;
+        showScreen(screenId);
+
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        target.classList.add('active');
+        
+        const userRenderers = {
+            'report-screen': initMap,
+            'check-status-screen': () => document.getElementById('report-list-container').innerHTML = '',
+        };
+
+        if (userRenderers[screenId]) {
+            userRenderers[screenId]();
+            return;
+        }
+
+        if (screenId.startsWith('admin')) {
+             const renderers = {
+                'admin-companies-screen': renderCompanyScreen,
+                'admin-reports-screen': renderAdminReportList,
+                'admin-stats-screen': renderStatsScreen,
+            };
+             if (renderers[screenId]) {
+                renderers[screenId]();
+            } else if (screenId === 'admin-dashboard-screen') {
+                switch(currentUser.role) {
+                    case 'pm': renderPmDashboard(); break;
+                    case 'towing': renderTowingDashboard(); break;
+                    case 'super': renderAdminDashboard(); break;
+                }
+            }
+        }
+    };
+
+    const initApp = () => {
+        const storedUser = sessionStorage.getItem('currentUser');
+        if (storedUser) {
+            currentUser = JSON.parse(storedUser);
+            updateNav(currentUser.role);
+            let initialScreen = 'admin-dashboard-screen';
+            const initialNav = document.querySelector(`[data-screen="${initialScreen}"]`);
+            if (initialNav) initialNav.click();
+            else showScreen(initialScreen);
+        } else {
+            currentUser = null;
+            updateNav('user');
+            showScreen('home-screen');
+            const homeNav = document.querySelector('[data-screen="home-screen"]');
+            if(homeNav) homeNav.classList.add('active');
+            headerTitle.textContent = '공유 모빌리티 신고';
+        }
+         document.querySelectorAll('#notice-list .notice-header').forEach(header => {
+            header.addEventListener('click', () => {
+                header.parentElement.classList.toggle('active');
+            });
+        });
+    };
+
+    const logout = () => {
+        currentUser = null;
+        sessionStorage.removeItem('currentUser');
+        const detailScreen = document.getElementById('admin-detail-screen');
+        if(detailScreen) detailScreen.remove();
+        initApp(); 
+    };
+
+    // --- RENDER FUNCTIONS ---
+
+    const createReportListHTML = (reportList) => {
+         if (reportList.length === 0) return '<p class="empty-list-message">해당 내역이 없습니다.</p>';
+        let listHtml = '<ul>';
+        reportList.forEach(r => {
+            const companyName = companies.find(c => c.id === r.companyId)?.name || '미배정';
+            listHtml += `<li data-report-id="${r.id}" class="report-item-clickable">
+                            <div class="report-item-info">
+                                <strong>기기 ID: ${r.deviceId}</strong>
+                                <span>${companyName} / ${r.date}</span>
+                            </div>
+                            <div class="report-item-status status-${r.status}">${r.status.replace('_', ' ')}</div>
+                         </li>`;
+        });
+        listHtml += '</ul>';
+        return listHtml;
     }
 
-    function buildNavigation() {
-        bottomNav.innerHTML = '';
-        const navConfig = {
-            super: [
-                { id: 'dashboard', icon: 'fa-tachometer-alt', text: '대시보드' },
-                { id: 'companies', icon: 'fa-building', text: '업체관리' },
-                { id: 'reports', icon: 'fa-file-alt', text: '신고관리' },
-                { id: 'stats', icon: 'fa-chart-pie', text: '통계' },
-                { id: 'logout', icon: 'fa-sign-out-alt', text: '로그아웃' },
-            ],
-            company: [
-                { id: 'dashboard', icon: 'fa-tachometer-alt', text: '대시보드' },
-                { id: 'my-reports', icon: 'fa-file-alt', text: '내 신고' },
-                { id: 'logout', icon: 'fa-sign-out-alt', text: '로그아웃' },
-            ],
+    const renderReportDetail = (reportId) => {
+        const report = reports.find(r => r.id == reportId);
+        if (!report) return;
+
+        let detailScreen = document.getElementById('admin-detail-screen');
+        if (!detailScreen) {
+            detailScreen = document.createElement('section');
+            detailScreen.id = 'admin-detail-screen';
+            document.querySelector('main').appendChild(detailScreen);
+        }
+        
+        headerTitle.textContent = `신고 #${report.id} 상세`;
+
+        let content = `
+            <button id="back-to-list-btn">&larr; 목록으로 돌아가기</button>
+            <div class="detail-content">
+                 <div id="admin-detail-info">
+                    <h3>기본 정보</h3>
+                    <p><strong>기기 ID:</strong> ${report.deviceId}</p>
+                    <p><strong>신고 날짜:</strong> ${report.date}</p>
+                    <p><strong>현재 상태:</strong> <span class="report-item-status status-${report.status}">${report.status.replace('_', ' ')}</span></p>
+                </div>
+                <div>
+                    <h3>신고 내용</h3>
+                    <p>${report.content || '내용 없음'}</p>
+                    <h3>신고 사진</h3>
+                    <img src="${report.photo}" alt="신고 사진" class="detail-photo">
+                </div>
+            </div>`;
+        
+        const roleActions = {
+            'pm': `
+                <div class="detail-actions">
+                    <h3>처리 상태 변경</h3>
+                    <form id="pm-update-form">
+                        <textarea id="pm-action-content" placeholder="처리 내용을 입력하세요..."></textarea>
+                        <label for="pm-action-photo">처리 후 사진 첨부</label>
+                        <input type="file" id="pm-action-photo" accept="image/*">
+                        <button type="button" data-status="completed">정비완료</button>
+                        <button type="button" data-status="towed">견인 요청</button>
+                    </form>
+                </div>`,
+            'towing': `
+                <div class="detail-actions">
+                    <h3>견인 완료 처리</h3>
+                    <form id="towing-update-form">
+                         <label for="towing-action-photo">견인 완료 사진</label>
+                        <input type="file" id="towing-action-photo" accept="image/*">
+                        <button type="button" data-status="towing_completed">견인 완료</button>
+                    </form>
+                </div>`,
         };
-        const userNav = navConfig[currentUser.role];
-        userNav.forEach(item => {
-            const navItem = document.createElement('a');
-            navItem.href = '#';
-            navItem.id = `nav-${item.id}`;
-            navItem.classList.add('nav-item');
-            navItem.innerHTML = `<i class="fas ${item.icon}"></i><span>${item.text}</span>`;
-            navItem.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (item.id === 'logout') logout();
-                else showScreen(item.id);
+
+        content += roleActions[currentUser.role] || '';
+
+        detailScreen.innerHTML = content;
+        showScreen('admin-detail-screen');
+
+        document.getElementById('back-to-list-btn').addEventListener('click', () => {
+            detailScreen.remove(); 
+            const activeNav = document.querySelector('.nav-item.active');
+            if (activeNav) activeNav.click();
+            else initApp(); // Fallback
+        });
+
+        detailScreen.querySelector('.detail-actions button')?.addEventListener('click', (e) => {
+            const newStatus = e.target.dataset.status;
+            if(newStatus) updateReportStatus(reportId, newStatus);
+        });
+    };
+
+    const updateReportStatus = (reportId, newStatus) => {
+        const report = reports.find(r => r.id == reportId);
+        if (report) {
+            report.status = newStatus;
+            alert(`신고 #${reportId}의 상태가 '${newStatus.replace('_',' ')}'(으)로 변경되었습니다.`);
+            document.getElementById('back-to-list-btn').click();
+        }
+    };
+
+    // --- Admin Role Specific Renders ---
+    const renderAdminDashboard = () => {
+        const screen = document.getElementById('admin-dashboard-screen');
+        screen.innerHTML = `<h2>총괄 대시보드</h2><p>환영합니다, ${currentUser.username}님.</p><p>현재 총 ${reports.length}건의 신고가 있습니다.</p>`;
+    };
+
+    const renderPmDashboard = () => {
+        const screen = document.getElementById('admin-dashboard-screen');
+        const companyReports = reports.filter(r => r.companyId === currentUser.companyId);
+        const companyName = companies.find(c => c.id === currentUser.companyId)?.name || 'PM 업체';
+        headerTitle.textContent = companyName; // Update header title
+
+        let content = `
+            <div class="pm-tabs">
+                <button class="pm-tab-link active" data-status="received">신고</button>
+                <button class="pm-tab-link" data-status="completed">정비완료</button>
+                <button class="pm-tab-link" data-status="towed">견인</button>
+            </div>
+            <div id="pm-report-list" class="report-list-container"></div>`;
+        screen.innerHTML = content;
+
+        const renderListByStatus = (status) => {
+            const listContainer = document.getElementById('pm-report-list');
+            const filteredReports = companyReports.filter(r => r.status === status);
+            listContainer.innerHTML = createReportListHTML(filteredReports);
+            listContainer.querySelectorAll('.report-item-clickable').forEach(item => {
+                item.addEventListener('click', () => renderReportDetail(item.dataset.reportId));
             });
-            bottomNav.appendChild(navItem);
+        };
+
+        screen.querySelectorAll('.pm-tab-link').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                screen.querySelectorAll('.pm-tab-link').forEach(t => t.classList.remove('active'));
+                e.target.classList.add('active');
+                renderListByStatus(e.target.dataset.status);
+            });
+        });
+        renderListByStatus('received');
+    };
+
+    const renderTowingDashboard = () => {
+        const screen = document.getElementById('admin-dashboard-screen');
+        const towedReports = reports.filter(r => r.status === 'towed' || r.status === 'towing_completed');
+        screen.innerHTML = `<div class="report-list-container">${createReportListHTML(towedReports)}</div>`;
+        screen.querySelectorAll('.report-item-clickable').forEach(item => {
+            item.addEventListener('click', () => renderReportDetail(item.dataset.reportId));
+        });
+    };
+
+    const renderAdminReportList = () => {
+        const screen = document.getElementById('admin-reports-screen');
+        screen.innerHTML = `<div class="report-list-container">${createReportListHTML(reports)}</div>`;
+        screen.querySelectorAll('.report-item-clickable').forEach(item => {
+            item.addEventListener('click', () => renderReportDetail(item.dataset.reportId));
         });
     }
 
-    // --- SCREEN MANAGEMENT ---
-    function showScreen(screenId) {
-        mainContent.innerHTML = '';
-        const navItem = document.getElementById(`nav-${screenId}`);
-        if (navItem) {
-            headerTitle.textContent = navItem.querySelector('span').textContent;
-            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-            navItem.classList.add('active');
-        }
-        const screenRenderers = {
-            dashboard: renderDashboard,
-            companies: renderCompanyScreen,
-            reports: renderReportScreen,
-            stats: renderStatsScreen,
-            'my-reports': renderMyReportsScreen,
-        };
-        if (screenRenderers[screenId]) screenRenderers[screenId]();
-        else mainContent.innerHTML = `<p>페이지를 찾을 수 없습니다.</p>`;
-    }
+    const renderCompanyScreen = () => { 
+        const screen = document.getElementById('admin-companies-screen');
+        const companyList = companies.map(c => `<li>${c.name} (Prefix: ${c.prefix})</li>`).join('');
+        screen.innerHTML = `<ul>${companyList}</ul>`;
+    };
+    const renderStatsScreen = () => { 
+        const screen = document.getElementById('admin-stats-screen');
+        screen.innerHTML = '<p>통계 기능은 현재 준비 중입니다.</p>';
+     };
+    
+    // --- User Mode ---
+    const initMap = () => {
+        // ... map logic ...
+    };
 
-    // --- SCREEN RENDERERS ---
-    function renderDashboard() { /* ... same as before ... */ }
-    function renderCompanyScreen() { /* ... same as before ... */ }
-    function renderReportScreen() { /* ... same as before ... */ }
-
-    function renderStatsScreen() {
-        const statsByMonth = reports.reduce((acc, report) => {
-            const month = report.date.substring(0, 7); // YYYY-MM
-            if (!acc[month]) {
-                acc[month] = { total: 0, moved: 0, towed: 0 };
-            }
-            acc[month].total++;
-            if (report.status === 'moved') acc[month].moved++;
-            if (report.status === 'towed') acc[month].towed++;
-            return acc;
-        }, {});
-
-        let tableHtml = `
-            <section id="statistics">
-                <div class="table-container">
-                    <table id="stats-table">
-                        <thead>
-                            <tr>
-                                <th>월</th>
-                                <th>총 신고 건</th>
-                                <th>PM 처리 건</th>
-                                <th>견인 처리 건</th>
-                            </tr>
-                        </thead>
-                        <tbody>`;
-
-        for (const month in statsByMonth) {
-            const data = statsByMonth[month];
-            tableHtml += `
-                <tr>
-                    <td>${month}</td>
-                    <td>${data.total}</td>
-                    <td>${data.moved}</td>
-                    <td>${data.towed}</td>
-                </tr>`;
-        }
-
-        tableHtml += `</tbody></table></div></section>`;
-        mainContent.innerHTML = tableHtml;
-    }
-
-    function renderMyReportsScreen() { mainContent.innerHTML = `<p>내 신고 보기 화면 (준비 중)</p>`; }
-
-    // --- CRUD & Other Functions (addCompany, deleteCompany, downloadReportsAsExcel, logout) ---
-    // ... (These functions remain the same as the previous version)
+    initApp();
 });
-
